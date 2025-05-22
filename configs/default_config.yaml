@@ -1,0 +1,38 @@
+# configs/default_config.yaml
+
+# 日志配置
+logging:
+  log_dir: "logs" # 日志文件存放目录
+  log_level: "INFO" # 日志级别 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  max_bytes: 10485760 # 单个日志文件最大大小 (10MB)
+  backup_count: 5     # 保留的备份文件数量
+
+# 数据路径配置
+paths:
+  data_dir: "data"
+  vector_store_dir: "vector_store_data" # 向量数据库持久化路径
+  cache_db_path: ".rag_cache.db"        # SQLite缓存数据库路径 (如果使用SQLite)
+
+# LLM 基础配置 (占位，后续会详细定义具体类型)
+llm:
+  type: "ollama" # 必须与 OllamaLLMConfig 中的 type 字段匹配
+  model_name: "deepseek-coder:6.7b-instruct" # 你实际使用的 Ollama 模型名
+  temperature: 0.2
+  num_ctx: 4096 # 例如
+  # top_k: 40
+  # top_p: 0.9
+  # repeat_penalty: 1.1
+
+# Embedding 基础配置 (占位)
+embedding:
+  type: "ollama_embedding"
+  model_name: "nomic-embed-text:latest"
+
+# 缓存配置 (先简单定义启用和类型)
+cache:
+  enable: true
+  type: "sqlite" # 或 "memory"
+  max_size: 1000
+  ttl_seconds: 3600 # 可选，仅内存缓存可能使用
+
+# 未来其他配置...
