@@ -10,23 +10,96 @@ logging:
 # 数据路径配置
 paths:
   data_dir: "data"
-  vector_store_dir: "vector_store_data" # 向量数据库持久化路径
   cache_db_path: ".rag_cache.db"        # SQLite缓存数据库路径 (如果使用SQLite)
 
 # LLM 基础配置 (占位，后续会详细定义具体类型)
 llm:
   type: "ollama" # 必须与 OllamaLLMConfig 中的 type 字段匹配
-  model_name: "deepseek-coder:6.7b-instruct" # 你实际使用的 Ollama 模型名
+  model_name: "deepseek-r1:8b" # 你实际使用的 Ollama 模型名
   temperature: 0.2
   num_ctx: 4096 # 例如
   # top_k: 40
   # top_p: 0.9
   # repeat_penalty: 1.1
 
-# Embedding 基础配置 (占位)
+# Embedding 配置 (现在使用更具体的结构)
 embedding:
-  type: "ollama_embedding"
-  model_name: "nomic-embed-text:latest"
+  type: "ollama_embedding" # 必须与 OllamaEmbeddingConfig 中的 type 字段匹配
+  model_name: "nomic-embed-text:latest" # 你实际使用的 Ollama Embedding 模型名
+  # base_url: "http://localhost:11434" # 如果你的Ollama不在默认地址
+
+# Vector Store 配置
+vector_store:
+  type: "faiss" # 必须与 FaissVectorStoreConfig 中的 type 字段匹配
+  persist_directory: "vector_store_data/faiss_index" # FAISS 索引文件的存放目录
+  index_name: "my_rag_index" # FAISS 索引文件名 (例如，会生成 my_rag_index.faiss)
+  allow_dangerous_deserialization: true
+
+# Document Loader 配置
+document_loader:
+  type: "directory_loader"
+  glob_pattern: "**/*.txt" # 加载 data_dir 下所有子目录的 .txt 文件
+  use_multithreading: false
+  silent_errors: false
+  text_loader_autodetect_encoding: true # TextLoader specific arg
+
+# Text Splitter 配置
+text_splitter:
+  type: "recursive_character"
+  chunk_size: 500
+  chunk_overlap: 50
+  keep_separator: true
+
+## Retriever 配置
+#retriever:
+#  type: "vector_retriever" # <--- 新增/修改: 显式指定 type
+#  strategy: "vector"
+#  top_k: 3
+#  search_type: "similarity_score_threshold"
+#  score_threshold: 0.7
+#  # 如果 strategy 是 "hybrid", 那么 type 可能是 "hybrid_retriever"
+#  # bm25_weight: 0.4 # 仅当 strategy 为 hybrid 时需要
+#  # vector_weight: 0.6 # 仅当 strategy 为 hybrid 时需要
+
+prompts:
+  qa_template_str: |  # 使用 |允许多行字符串
+    基于以下上下文已知信息，请简洁并专业地回答用户的问题。
+    如果无法从中得到答案，请说 "根据已知信息无法回答该问题" 或 "没有提供足够的相关信息"。不允许在答案中添加编造成分。
+
+    上下文内容:
+    {context}
+
+    问题:
+    {question}
+
+memory:
+  enable: true
+  memory_type: "conversation_buffer"
+  memory_key: "chat_history"
+  input_key: "query" # RetrievalQA 使用 'query' 作为输入键
+  output_key: "result"
+
+retriever:
+  strategy: "hybrid" # "vector", "bm25", "hybrid"
+  bm25_config: # 仅当 strategy 为 "bm25" 或 "hybrid" 时相关
+    type: "bm25_retriever" # 确保这个 type 存在
+    k1: 1.5
+    b: 0.75
+    top_k: 2 # BM25 检索2个
+  vector_config: # 仅当 strategy 为 "vector" 或 "hybrid" 时相关
+    type: "vector_retriever" # 确保这个 type 存在
+    search_type: "similarity_score_threshold"
+    score_threshold: 0.65 # 稍微降低阈值以便混合时有更多候选
+    top_k: 2 # 向量检索2个
+  hybrid_config: # 仅当 strategy 为 "hybrid" 时相关
+    type: "hybrid_retriever" # 确保这个 type 存在
+    bm25_weight: 0.4
+    vector_weight: 0.6
+    top_k: 3 # 混合后最终取3个
+
+rag_chain:
+  chain_type: "stuff"
+  return_source_documents: true
 
 # 缓存配置 (先简单定义启用和类型)
 cache:
